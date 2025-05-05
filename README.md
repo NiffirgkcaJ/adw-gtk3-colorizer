@@ -1,16 +1,18 @@
 # adw-gtk3 Colorizer GNOME Extension
 
-Colorize your GTK3 applications using the adw-gtk3 theme with your chosen system accent color.
+Synchronize your GTK3 (with adw-gtk3 theme) and certain Adwaita-based GTK4 application accent colors (for named colors) with your chosen system accent color.
 
-This GNOME Shell extension automatically reads your system's accent color setting and dynamically updates your `~/.config/gtk-3.0/gtk.css` file to apply that color to the adw-gtk3 theme.
+This GNOME Shell extension automatically reads your system's accent color setting. It dynamically updates your `~/.config/gtk-3.0/gtk.css` file to apply the color to the **adw-gtk3 theme** for GTK3 applications and, for **named colors only**, updates your `~/.config/gtk-4.0/gtk.css` file to set the `--accent-bg-color` variable for use by the **Adwaita theme** in GTK4 applications.
+
+**Note:** Custom hex colors are only applicable to GTK3 applications.
 
 ## Features
 
-* Automatically applies your GNOME system accent color to the adw-gtk3 theme for GTK3 applications.
-* Supports predefined GNOME accent colors and custom hex color codes.
-* Manages the necessary CSS definitions in `~/.config/gtk-3.0/gtk.css` safely.
-* Creates a backup (`gtk.css.bak`) before modifying the file (if no backup exists).
-* Removes the injected CSS block and cleans up on extension disable.
+* Automatically applies your GNOME system accent color to the **adw-gtk3 theme** for GTK3 applications and, for **named colors only**, sets the accent background color variable for use by the **Adwaita theme** in GTK4 applications.
+* Supports predefined GNOME accent colors and custom hex color codes (custom hex colors only apply to GTK3).
+* Manages the necessary CSS definitions in `~/.config/gtk-3.0/gtk.css` and `~/.config/gtk-4.0/gtk.css` safely.
+* Creates backups (`gtk.css.bak`) for both files before modifying them (if no backup exists).
+* Removes the injected CSS blocks and cleans up on extension disable.
 
 ## Compatibility
 
@@ -46,7 +48,7 @@ If you prefer to install manually from the source code and use the provided scri
     gnome-extensions enable adw-gtk3-colorizer@NiffirgkcaJ.github.com
     ```
 
-*(Note: If you are installing manually without using the `./install.sh` script, ensure the cloned directory is named exactly `adw-gtk3-colorizer@NiffirgkcaJ.github.com` and is placed in `~/.local/share/gnome-shell/extensions/`)*
+**Note:** If you are installing manually without using the `./install.sh` script, ensure the cloned directory is named exactly `adw-gtk3-colorizer@NiffirgkcaJ.github.com` and is placed in `~/.local/share/gnome-shell/extensions/`.
 
 ## Usage
 
@@ -91,18 +93,20 @@ If you installed manually, you can uninstall using the provided script or standa
     rm -rf ~/.local/share/gnome-shell/extensions/adw-gtk3-colorizer@NiffirgkcaJ.github.com
     ```
 
-**Note:** When the extension is disabled or uninstalled, it automatically removes the CSS block it added to `~/.config/gtk-3.0/gtk.css` and attempts to restore from the backup if applicable, ensuring a clean removal.
+**Note:** When the extension is disabled or uninstalled, it automatically removes the CSS block it added to `~/.config/gtk-3.0/gtk.css` and `~/.config/gtk-4.0/gtk.css`, and then attempts to restore from the backup if applicable, ensuring a clean removal.
 
 ## Flatpak Compatibility
 
-GTK3 applications installed as Flatpaks are sandboxed and do not have access to your user configuration directories like `~/.config/gtk-3.0/` by default. To allow Flatpak GTK3 apps to pick up the CSS changes made by this extension, you need to grant them filesystem access to this directory.
+Flatpak applications are sandboxed and do not have access to user configuration directories like `~/.config/gtk-3.0/` or `~/.config/gtk-4.0/` by default. To allow Flatpak GTK3 (using adw-gtk3) and GTK4 apps to pick up the CSS changes made by this extension, you need to grant them filesystem access to these directories.
 
-You can do this for all Flatpak applications using the following command:
+You can grant access to the specific directories managed by this extension for all Flatpak applications using the following commands:
 
 ```bash
 sudo flatpak override --filesystem=xdg-config/gtk-3.0
+sudo flatpak override --filesystem=xdg-config/gtk-4.0
 ```
-This command grants full filesystem access to the `~/.config/gtk-3.0/` directory for all Flatpak applications.
+
+This command grants full filesystem access to the `~/.config/gtk-3.0/` and `~/.config/gtk-4.0/` directories for all Flatpak applications.
 
 ## Credits
 
