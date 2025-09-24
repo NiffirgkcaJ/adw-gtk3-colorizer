@@ -3,9 +3,10 @@
   "name": "adw-gtk3 Colorizer",
   "shell-version": [
     "47",
-    "48"
+    "48",
+    "49"
   ],
   "url": "https://github.com/NiffirgkcaJ/adw-gtk3-colorizer",
   "uuid": "adw-gtk3-colorizer@NiffirgkcaJ.github.com",
-  "version": 2
+  "version": 3
 }
