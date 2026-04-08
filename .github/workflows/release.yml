@@ -1,0 +1,162 @@
+name: Release Workflow
+
+on:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - '*'
+
+jobs:
+  # --- JOB 1: VERIFY VERSION MATCH ---
+  verify-version-match:
+    if: startsWith(github.event.head_commit.message, 'Version ')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Verify that commit version matches metadata.json
+        run: |
+          # Extract version from commit message (e.g., "3.0.0")
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          COMMIT_VERSION=$(echo "$COMMIT_MSG" | sed -n 's/^Version \([0-9.]*\).*/\1/p')
+
+          # Extract version from metadata.json
+          METADATA_VERSION=$(jq -r '.version' gnome-extensions/extension/metadata.json)
+
+          echo "Version in commit message: $COMMIT_VERSION"
+          echo "Version in metadata.json: $METADATA_VERSION"
+
+          if [[ "$COMMIT_VERSION" != "$METADATA_VERSION" ]]; then
+            echo "::error::Version mismatch! Commit version is '$COMMIT_VERSION' but metadata.json version is '$METADATA_VERSION'."
+            exit 1
+          else
+            echo "Versions match. Proceeding with release."
+          fi
+
+  # --- JOB 2: CREATE THE RELEASE ---
+  create-release:
+    needs: verify-version-match
+    if: startsWith(github.event.head_commit.message, 'Version ')
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pull latest changes from bot
+        run: git pull origin main
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq gettext libglib2.0-dev zip
+
+      - name: Extract Version from Commit Message
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          RELEASE_VERSION=$(echo "$COMMIT_MSG" | sed -n 's/^Version \([0-9.]*\).*/\1/p')
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+
+      - name: Build the Extension Package
+        run: ./build.sh package
+
+      - name: Determine Asset Filename
+        run: echo "ASSET_NAME=$(jq -r '.uuid' gnome-extensions/extension/metadata.json).zip" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.RELEASE_VERSION }}
+          name: ${{ github.event.head_commit.message }}
+          files: ${{ env.ASSET_NAME }}
+          generate_release_notes: true
+
+  # --- JOB 3: UPLOAD TO GNOME EXTENSIONS ---
+  upload-to-gnome-extensions:
+    needs: create-release
+    if: startsWith(github.event.head_commit.message, 'Version ')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pull latest changes from bot
+        run: git pull origin main
+
+      - name: Install Dependencies for Build Script
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq gettext libglib2.0-dev zip
+
+      - name: Run the Custom Build Process
+        run: ./build.sh review
+
+      - name: Rename Artifact for Upload Action
+        run: |
+          ORIGINAL_ZIP="$(jq -r '.uuid' gnome-extensions/extension/metadata.json)-review.zip"
+          RENAMED_ZIP="$(jq -r '.uuid' gnome-extensions/extension/metadata.json).shell-extension.zip"
+          mv "$ORIGINAL_ZIP" "$RENAMED_ZIP"
+
+      - name: Upload to GNOME Extensions
+        uses: murar8/gnome-extensions-action@0.1.0
+        with:
+          username: ${{ secrets.GNOME_USERNAME }}
+          password: ${{ secrets.GNOME_PASSWORD }}
+          accept-tos: true
+          source-dir: ''
+
+  # --- JOB 4: SYNC TO GITLAB ---
+  sync-to-gitlab:
+    needs: create-release
+    if: always() # This ensures it runs even if create-release is skipped.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pull latest changes from bot
+        run: |
+          git pull origin main
+          git fetch --tags origin
+
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.KEY_GITHUB_GITLAB_SYNC }}
+
+      - name: Push to GitLab
+        run: |
+          echo "Syncing to GitLab..."
+
+          # Configure git
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "actions@github.com"
+
+          # Add GitLab remote
+          ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
+          git remote add gitlab "git@gitlab.com:NiffirgkcaJ/${{ github.event.repository.name }}.git"
+
+          # Push to GitLab
+          echo "Pushing to GitLab..."
+          git push gitlab main --force
+
+          # Push tags to GitLab
+          echo "Pushing tags to GitLab..."
+          git push gitlab --tags --force
