@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Dependencies
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -50,7 +50,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -75,7 +75,7 @@ jobs:
         run: echo "ASSET_NAME=$(jq -r '.uuid' gnome-extensions/extension/metadata.json).zip" >> $GITHUB_ENV
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ env.RELEASE_VERSION }}
           name: ${{ github.event.head_commit.message }}
@@ -90,7 +90,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -112,7 +112,7 @@ jobs:
           mv "$ORIGINAL_ZIP" "$RENAMED_ZIP"
 
       - name: Upload to GNOME Extensions
-        uses: murar8/gnome-extensions-action@0.1.0
+        uses: murar8/gnome-extensions-action@0.1.1
         with:
           username: ${{ secrets.GNOME_USERNAME }}
           password: ${{ secrets.GNOME_PASSWORD }}
@@ -127,7 +127,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -137,7 +137,7 @@ jobs:
           git fetch --tags origin
 
       - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.KEY_GITHUB_GITLAB_SYNC }}
 
